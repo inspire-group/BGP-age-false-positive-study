@@ -3,6 +3,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Var files used by script to store progress variables.
+*.var
+
 # C extensions
 *.so
 
