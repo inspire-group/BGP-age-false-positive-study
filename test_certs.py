@@ -204,18 +204,25 @@ with open(lastCertificateIndexProcessedFileLocation, 'wb') as lastCertificateInd
 				
 							gvenASPathArray = asPath.split(' ')
 							newTimeListArray = [str(update['time'])] * len(gvenASPathArray)
-							for i in xrange(len(newTimeListArray)):
-								if (len(storedTimeListArray) - i - 1 >= 0):
-									newTimeListArray[len(newTimeListArray) - i - 1] = storedTimeListArray[len(storedTimeListArray) - i - 1]
+
+							for i in xrange(len(gvenASPathArray)):
+								# We are working from the end of these arrays and they both have different length. Thus (since the index counts from the beginning) we must use 2 separate indexes for the old and new AS path arrays.
+								# This old array index can be less than 0 in the case where the new AS path is shorter. Once the old array index goes blow 0 it is an exit condition which is checked for in the if statement below.
+								asPathIndexOldArray = len(storedASPathArray) - i - 1
+				
+								# The new index cannot be less than 0 because of the parameters of the loop.
+								asPathIndexNewArray = len(gvenASPathArray) - i - 1
+				
+								# In addition to the less than 0 exit condition we need to check to make sure the ASes actually match between the two updates.
+								if asPathIndexOldArray >= 0 and gvenASPathArray[asPathIndexNewArray] == storedASPathArray[asPathIndexOldArray]:
+									newTimeListArray[asPathIndexNewArray] = storedTimeListArray[asPathIndexOldArray]
 								else:
 									break
+
 							newTimeList = ' '.join(newTimeListArray)
 							# MySQL version
 							# I don't get why this is an insert or update. We should be gaurenteed that this prefix exists.
-							cursor.execute("""INSERT INTO bgpPrefixUpdates (prefix, asPath, timeList, updateTime) VALUES ('{0}', '{1}', '{2}', {3}) 
-								ON DUPLICATE KEY UPDATE asPath='{4}', timeList='{5}', 
-								updateTime={6}""".format(prefix, asPath, newTimeList, int(update['time']), asPath, newTimeList, int(update['time'])))
-							#cursor.execute("""INSERT OR REPLACE INTO bgpPrefixUpdates (prefix, asPath, timeList, updateTime) VALUES ('{0}', '{1}', '{2}', {3})""".format(prefix, asPath, newTimeList, int(update['time'])))
+							cursor.execute("""UPDATE bgpPrefixUpdates SET asPath='{0}', timeList='{1}', updateTime={2} WHERE prefix='{3}'""".format(asPath, newTimeList, int(update['time']), prefix))
 							conn.commit()
 
 				elif (update['type'] == 'W'):
